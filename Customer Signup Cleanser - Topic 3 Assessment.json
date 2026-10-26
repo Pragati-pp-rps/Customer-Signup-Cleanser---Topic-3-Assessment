@@ -1,0 +1,215 @@
+{
+  "name": "Customer Signup Cleanser - Topic 3 Assessment",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "da0cb4bb-3e48-461c-86d7-8c251f4dc7b7",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = [\n {id:'L001',fullName:'  Sarah   Connor ',email:' Sarah.Connor@Example.com ',phone:'(555) 123-4567'},\n {id:'L002',fullName:'Anna Lee',email:'ANNA.LEE@example.com',phone:'+1 (555) 222-3344'},\n {id:'L003',fullName:'',email:'missing@example.com',phone:'555-100-2000'},\n {id:'L004',fullName:'Michael Brown',email:'',phone:'555-222-1000'},\n {id:'L005',fullName:'sarah connor',email:'sarah.connor@example.com',phone:'555.123.4567'},\n {id:'L006',fullName:'  ANNA   LEE ',email:' anna.lee@EXAMPLE.com ',phone:'5552223344'},\n {id:'L007',fullName:' James   Wilson ',email:'JAMES@EXAMPLE.COM',phone:'555-888-1234'}\n];\nreturn leads.map(lead => ({json:lead}));"
+      },
+      "id": "e50452c4-81f9-4aa3-a4f4-2c10d25a1180",
+      "name": "Mock Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n const x=item.json;\n const name=String(x.fullName ?? '').trim();\n const email=String(x.email ?? '').trim();\n const missing=[];\n if (!name) missing.push('fullName');\n if (!email) missing.push('email');\n return {json:{...x,isValid:missing.length===0,rejectionReason:missing.length ? 'Missing required fields: '+missing.join(', ') : ''}};\n});"
+      },
+      "id": "16bd0a6b-a29e-4169-8033-32f800fd42f1",
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "eacdabc4-9c6d-4c6b-94dd-48b79452a6fc",
+              "leftValue": "={{ $json.isValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "197040de-880f-4139-9a0a-0ded0d08c36f",
+      "name": "IF - Required Fields Present",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n const x=item.json;\n const cleanedName=String(x.fullName).trim().replace(/\\s+/g,' ').toLowerCase().replace(/\\b\\p{L}/gu,c=>c.toUpperCase());\n const cleanedEmail=String(x.email).trim().toLowerCase();\n const cleanedPhone=String(x.phone ?? '').replace(/\\D/g,'');\n return {json:{...x,cleanedName,cleanedEmail,cleanedPhone}};\n});"
+      },
+      "id": "d7066d4b-2d71-4eb0-905b-e6023303dfeb",
+      "name": "Clean and Standardize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "removeItems"
+      },
+      "id": "3b58511f-1c3a-4096-9e65-c4271d36b2d5",
+      "name": "Remove Duplicates - Cleaned Email",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        272,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n const x=item.json;\n return {json:{id:x.id,name:x.cleanedName,email:x.cleanedEmail,phone:x.cleanedPhone,status:'Ready for CRM',originalEmail:x.email}};\n});"
+      },
+      "id": "78a71c4b-1c65-4cda-9401-febd6395d7ac",
+      "name": "Map Final Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item=>({json:{...item.json,status:'Rejected - Missing Fields'}}));"
+      },
+      "id": "d4728e53-8860-4f76-a6a9-c1a1bef3eef8",
+      "name": "Rejected Missing Fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        560
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Mock Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Leads": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "IF - Required Fields Present",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Required Fields Present": {
+      "main": [
+        [
+          {
+            "node": "Clean and Standardize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rejected Missing Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean and Standardize": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates - Cleaned Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates - Cleaned Email": {
+      "main": [
+        [
+          {
+            "node": "Map Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c318d3a5-694e-49a1-9122-623bb83676c7",
+  "meta": {
+    "instanceId": "a03c7678428ef19ededbf912f16f7d5798ec7b9ab4c17f2a2def6a9e791e7215"
+  },
+  "nodeGroups": [],
+  "id": "30LS1qXOq4KzwPNi",
+  "tags": []
+}
